@@ -1,43 +1,51 @@
 package model
 
 import (
+	"log"
 	"math/rand"
 	"sync"
 )
 
 type Person struct {
-	CurrentFloor     int
+	Id               int
+	StartingFloor    int
 	DestinationFloor int
 	TravelTime       int
-	IsUnderWay       bool
+	IsTraveling      bool
 	WaitingTime      int
 	IsWaiting        bool
 	PickUpSignal     chan interface{}
 	DropOffSignal    chan interface{}
 }
 
-func NewPerson(currentFloor int, destinationFloor int) *Person {
+func NewPerson(id int, currentFloor int, destinationFloor int) *Person {
 	return &Person{
-		CurrentFloor:     currentFloor,
+		Id:               id,
+		StartingFloor:    currentFloor,
 		DestinationFloor: destinationFloor,
 		PickUpSignal:     make(chan interface{}),
 		DropOffSignal:    make(chan interface{}),
 	}
 }
 
-func NewRandomPerson(floorCount int) *Person {
-	currentFloor := rand.Intn(floorCount)
+func NewRandomPerson(id int, floorCount int) *Person {
+	startingFloor := rand.Intn(floorCount)
 	destinationFloor := rand.Intn(floorCount)
-	return NewPerson(currentFloor, destinationFloor)
+	if destinationFloor == startingFloor {
+		destinationFloor = (destinationFloor + 1) % floorCount
+	}
+	return NewPerson(id, startingFloor, destinationFloor)
 }
 
-func (p *Person) Run(controller *Controller, group sync.WaitGroup) {
+func (p *Person) Run(controller *Controller, group *sync.WaitGroup) {
 	defer group.Done()
-	controller.Floors[p.CurrentFloor] <- p
+	controller.Floors[p.StartingFloor] <- p
 	p.IsWaiting = true
 	<-p.PickUpSignal
+	log.Printf("person   %03v: traveling from floor %v to floor %v", p.Id, p.StartingFloor, p.DestinationFloor)
 	p.IsWaiting = false
-	p.IsUnderWay = true
+	p.IsTraveling = true
 	<-p.DropOffSignal
-	p.IsUnderWay = false
+	log.Printf("person   %03v: arrived on floor %v", p.Id, p.DestinationFloor)
+	p.IsTraveling = false
 }
