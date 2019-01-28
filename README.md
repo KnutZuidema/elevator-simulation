@@ -6,7 +6,7 @@ Used as a golang learning exercise.
 ## What I used
 
 * basic language constructs:
-  * structs, channels, interfaces etc.
+  * structs, channels, interfaces, go routines etc.
 * `math/rand` package for generation of new passengers
 * `time` package for `time.Ticker` functionality (simulate travel time of elevators)
 * `sync` package for coordination of program flow
