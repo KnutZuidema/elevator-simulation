@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/KnutZuidema/elevator-simulation/model"
+	"github.com/KnutZuidema/elevator-simulation/pkg/model"
 	"log"
 	"os"
 )
