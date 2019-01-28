@@ -1,9 +1,9 @@
 package model
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 type Simulation struct {
@@ -38,29 +38,29 @@ func (s *Simulation) Run() {
 }
 
 func controlSimulationSimple(controller *Controller) {
-	var iteration int
-	for {
-		iteration++
+	ticker := time.NewTicker(time.Millisecond)
+	for range ticker.C {
 		updatePersons(controller)
-		signalElevators(controller)
 		checkFloors(controller)
-		if iteration%10000 == 0 {
-			controller.simulation.Evaluate(fmt.Sprintf("reports/%v-report.txt", iteration), controller)
-		}
+		signalElevators(controller)
 	}
 }
 
 func checkFloors(controller *Controller) {
-floor:
 	for i, floor := range controller.Floors {
 		if len(floor) > 0 {
+			var closest *Elevator
 			for _, elevator := range controller.elevators {
-				if elevator.CurrentFloor == elevator.DestinationFloor {
-					elevator.DestinationFloor = i
-					log.Printf("elevator %03v: new destination is %v (external signal)",
-						elevator.Id, elevator.DestinationFloor)
-					continue floor
+				if elevator.Capacity > len(elevator.Persons) {
+					if closest == nil {
+						closest = elevator
+					} else if absolute(elevator.CurrentFloor-i) < absolute(closest.CurrentFloor-i) {
+						closest = elevator
+					}
 				}
+			}
+			if closest != nil {
+				closest.Destinations[i] = true
 			}
 		}
 	}
@@ -68,23 +68,52 @@ floor:
 
 func signalElevators(controller *Controller) {
 	for _, elevator := range controller.elevators {
-		if elevator.CurrentFloor < elevator.DestinationFloor {
-			elevator.AscendSignal <- nil
-		} else if elevator.CurrentFloor > elevator.DestinationFloor {
-			elevator.DescendSignal <- nil
-		} else {
+		if elevator.Destinations[elevator.CurrentFloor] {
 			elevator.OpenDoorsSignal <- nil
+			<-elevator.ContinueSignal
+			elevator.Destinations = map[int]bool{}
+			for _, person := range elevator.Persons {
+				elevator.Destinations[person.DestinationFloor] = true
+			}
+		} else {
+			closestFloor := elevator.CurrentFloor
+			for i := 1; elevator.CurrentFloor+i < controller.simulation.FloorCount || elevator.CurrentFloor-i >= 0; i++ {
+				if elevator.Destinations[elevator.CurrentFloor+i] {
+					closestFloor = elevator.CurrentFloor + i
+					break
+				}
+				if elevator.Destinations[elevator.CurrentFloor-i] {
+					closestFloor = elevator.CurrentFloor - i
+					break
+				}
+			}
+			if closestFloor < elevator.CurrentFloor {
+				elevator.DescendSignal <- nil
+			} else if closestFloor > elevator.CurrentFloor {
+				elevator.AscendSignal <- nil
+			} else {
+				elevator.IdleSignal <- nil
+			}
+			<-elevator.ContinueSignal
 		}
-		<-elevator.ContinueSignal
 	}
 }
 
 func updatePersons(controller *Controller) {
-	for _, person := range controller.persons {
+	controller.persons.Range(func(_, value interface{}) bool {
+		person := value.(*Person)
 		if person.IsWaiting {
 			person.WaitingTime++
 		} else if person.IsTraveling {
 			person.TravelTime++
 		}
+		return true
+	})
+}
+
+func absolute(value int) int {
+	if value < 0 {
+		return -value
 	}
+	return value
 }

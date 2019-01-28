@@ -1,7 +1,6 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -13,8 +12,8 @@ import (
 type Controller struct {
 	simulation *Simulation
 	Floors     []chan *Person
-	persons    []*Person
-	elevators  []*Elevator
+	persons    *sync.Map
+	elevators  map[int]*Elevator
 }
 
 func NewController(simulation *Simulation) *Controller {
@@ -25,7 +24,8 @@ func NewController(simulation *Simulation) *Controller {
 	return &Controller{
 		simulation: simulation,
 		Floors:     floors,
-		persons:    []*Person{},
+		persons:    &sync.Map{},
+		elevators:  map[int]*Elevator{},
 	}
 }
 
@@ -35,49 +35,34 @@ func (c *Controller) Evaluate(file io.Writer) {
 		return
 	}
 	for _, elevator := range c.elevators {
-		_, err := fmt.Fprintf(file, "Elevator %v: %v steps\n", elevator.Id, elevator.StepsTaken)
+		_, err := fmt.Fprintf(file, "  Elevator %02v: %v steps\n", elevator.Id, elevator.StepsTaken)
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
 	}
-	waitingPersons, _ := all(c.persons, func(i int) bool {
-		return c.persons[i].WaitingTime > 0
-	})
-	var temp interface{}
-	var meanWaitingTime float32
-	temp = waitingPersons
-	switch w := temp.(type) {
-	case []*Person:
-		meanWaitingTime, _ = mean(w, func(i int) int {
-			return w[i].WaitingTime
-		})
-	default:
-
-	}
-	meanTravelingTime, _ := mean(c.persons, func(i int) int {
-		return c.persons[i].TravelTime
-	})
 	_, err := fmt.Fprintf(file, "Persons: mean waiting time %v, mean traveling time %v\n",
-		meanWaitingTime, meanTravelingTime)
+		meanWaitingTime(c.persons), meanTravelTime(c.persons))
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	for _, person := range c.persons {
-		_, err := fmt.Fprintf(file, "Person %v: waited %v steps, travelled %v steps\n",
+	c.persons.Range(func(_, value interface{}) bool {
+		person := value.(*Person)
+		_, err := fmt.Fprintf(file, "  Person %04v: waited %v steps, traveled %v steps\n",
 			person.Id, person.WaitingTime, person.TravelTime)
 		if err != nil {
 			log.Fatal(err)
-			return
+			return false
 		}
-	}
+		return true
+	})
 }
 
 func (c *Controller) Run(controlSimulation func(*Controller)) {
 	for i := 0; i < c.simulation.ElevatorCount; i++ {
 		elevator := NewElevator(i, c.simulation.ElevatorCapacity)
-		c.elevators = append(c.elevators, elevator)
+		c.elevators[elevator.Id] = elevator
 		go elevator.Run(c)
 	}
 	var group sync.WaitGroup
@@ -89,49 +74,33 @@ func (c *Controller) Run(controlSimulation func(*Controller)) {
 
 func (c *Controller) generatePersons(group *sync.WaitGroup) {
 	for i := 0; i < c.simulation.PersonCount; i++ {
-		time.Sleep(time.Duration(10+rand.Intn(20)) * time.Millisecond)
+		time.Sleep(time.Duration(rand.Intn(1000)) * time.Microsecond)
 		person := NewRandomPerson(i, c.simulation.FloorCount)
-		c.persons = append(c.persons, person)
+		c.persons.Store(person.Id, person)
 		go person.Run(c, group)
 	}
 }
 
-func total(slice interface{}, key func(int) int) (total int, err error) {
-	switch s := slice.(type) {
-	case []interface{}:
-		for i := range s {
-			total += key(i)
-		}
-	default:
-		err = errors.New("invalid type, must be type []interface{}")
-	}
-	return
+func meanTravelTime(persons *sync.Map) float32 {
+	totalTravelTime := 0
+	personCount := 0
+	persons.Range(func(_, value interface{}) bool {
+		person := value.(*Person)
+		totalTravelTime += person.TravelTime
+		personCount++
+		return true
+	})
+	return float32(totalTravelTime) / float32(personCount)
 }
 
-func mean(slice interface{}, key func(int) int) (mean float32, err error) {
-	total, err := total(slice, key)
-	if err != nil {
-		return
-	}
-	switch s := slice.(type) {
-	case []interface{}:
-		mean = float32(total) / float32(len(s))
-	default:
-		err = errors.New("invalid type, must be type []interface{}")
-	}
-	return
-}
-
-func all(slice interface{}, key func(int) bool) (result []interface{}, err error) {
-	switch s := slice.(type) {
-	case []interface{}:
-		for i := range s {
-			if key(i) {
-				result = append(result, s[i])
-			}
-		}
-	default:
-		err = errors.New("invalid type, must be type []interface{}")
-	}
-	return
+func meanWaitingTime(persons *sync.Map) float32 {
+	totalWaitingTime := 0
+	personCount := 0
+	persons.Range(func(_, value interface{}) bool {
+		person := value.(*Person)
+		totalWaitingTime += person.WaitingTime
+		personCount++
+		return true
+	})
+	return float32(totalWaitingTime) / float32(personCount)
 }

@@ -8,6 +8,7 @@ import (
 
 const DEBUG = true
 
+//noinspection ALL
 func main() {
 	if !DEBUG {
 		file, err := os.OpenFile("simulation.log", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
@@ -16,5 +17,5 @@ func main() {
 		}
 		log.SetOutput(file)
 	}
-	model.NewSimulation(100, 25, 12, 1200).Run()
+	model.NewSimulation(100, 25, 10, 10000).Run()
 }

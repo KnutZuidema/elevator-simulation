@@ -1,7 +1,6 @@
 package model
 
 import (
-	"log"
 	"math/rand"
 	"sync"
 )
@@ -42,10 +41,10 @@ func (p *Person) Run(controller *Controller, group *sync.WaitGroup) {
 	controller.Floors[p.StartingFloor] <- p
 	p.IsWaiting = true
 	<-p.PickUpSignal
-	log.Printf("person   %03v: traveling from floor %v to floor %v", p.Id, p.StartingFloor, p.DestinationFloor)
+	//log.Printf("person   %04v: traveling from floor %v to floor %v", p.Id, p.StartingFloor, p.DestinationFloor)
 	p.IsWaiting = false
 	p.IsTraveling = true
 	<-p.DropOffSignal
-	log.Printf("person   %03v: arrived on floor %v", p.Id, p.DestinationFloor)
+	//log.Printf("person   %04v: arrived on floor %v", p.Id, p.DestinationFloor)
 	p.IsTraveling = false
 }
