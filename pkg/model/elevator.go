@@ -41,11 +41,11 @@ func (e *Elevator) Run(controller *Controller) {
 			log.Printf("elevator %04v: picked up %v persons on floor %v", e.Id, pickedUp, e.CurrentFloor)
 			e.StepsTaken++
 		case <-e.AscendSignal:
-			//log.Printf("elevator %04v: ascending from floor %v", e.Id, e.CurrentFloor)
+			// log.Printf("elevator %04v: ascending from floor %v", e.Id, e.CurrentFloor)
 			e.CurrentFloor++
 			e.StepsTaken++
 		case <-e.DescendSignal:
-			//log.Printf("elevator %04v: descending from floor %v", e.Id, e.CurrentFloor)
+			// log.Printf("elevator %04v: descending from floor %v", e.Id, e.CurrentFloor)
 			e.CurrentFloor--
 			e.StepsTaken++
 		case <-e.IdleSignal:
