@@ -1,24 +1,26 @@
 package model
 
 import (
-	"github.com/KnutZuidema/elevator-simulation/pkg/logic"
+	"fmt"
 	"log"
 	"os"
 )
 
 type Simulation struct {
-	FloorCount       int
-	ElevatorCount    int
-	ElevatorCapacity int
-	PersonCount      int
+	FloorCount            int
+	ElevatorCount         int
+	ElevatorCapacity      int
+	PersonCount           int
+	ControllingAlgorithms map[string]func(*Controller)
 }
 
 func NewSimulation(floorCount int, elevatorCount int, elevatorCapacity int, personCount int) *Simulation {
 	return &Simulation{
-		FloorCount:       floorCount,
-		ElevatorCount:    elevatorCount,
-		ElevatorCapacity: elevatorCapacity,
-		PersonCount:      personCount,
+		FloorCount:            floorCount,
+		ElevatorCount:         elevatorCount,
+		ElevatorCapacity:      elevatorCapacity,
+		PersonCount:           personCount,
+		ControllingAlgorithms: map[string]func(*Controller){},
 	}
 }
 
@@ -32,7 +34,9 @@ func (s *Simulation) Evaluate(filename string, controller *Controller) {
 }
 
 func (s *Simulation) Run() {
-	controller := NewController(s)
-	controller.Run(logic.ControlSimulationSimple)
-	s.Evaluate("final_report.txt", controller)
+	for name, algorithm := range s.ControllingAlgorithms {
+		controller := NewController(s)
+		controller.Run(algorithm)
+		s.Evaluate(fmt.Sprintf("%v_report.txt", name), controller)
+	}
 }

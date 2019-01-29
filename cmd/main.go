@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/KnutZuidema/elevator-simulation/pkg/logic"
 	"github.com/KnutZuidema/elevator-simulation/pkg/model"
 	"log"
 	"os"
@@ -17,5 +18,7 @@ func main() {
 		}
 		log.SetOutput(file)
 	}
-	model.NewSimulation(100, 25, 10, 10000).Run()
+	simulation := model.NewSimulation(100, 25, 10, 10000)
+	simulation.ControllingAlgorithms["simple"] = logic.ControlSimulationSimple
+	simulation.Run()
 }
