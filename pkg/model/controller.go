@@ -10,10 +10,10 @@ import (
 )
 
 type Controller struct {
-	simulation *Simulation
+	Simulation *Simulation
 	Floors     []chan *Person
-	persons    *sync.Map
-	elevators  map[int]*Elevator
+	Persons    *sync.Map
+	Elevators  map[int]*Elevator
 }
 
 func NewController(simulation *Simulation) *Controller {
@@ -22,10 +22,10 @@ func NewController(simulation *Simulation) *Controller {
 		floors[i] = make(chan *Person, simulation.ElevatorCapacity)
 	}
 	return &Controller{
-		simulation: simulation,
+		Simulation: simulation,
 		Floors:     floors,
-		persons:    &sync.Map{},
-		elevators:  map[int]*Elevator{},
+		Persons:    &sync.Map{},
+		Elevators:  map[int]*Elevator{},
 	}
 }
 
@@ -34,7 +34,7 @@ func (c *Controller) Evaluate(file io.Writer) {
 		log.Fatal(err)
 		return
 	}
-	for _, elevator := range c.elevators {
+	for _, elevator := range c.Elevators {
 		_, err := fmt.Fprintf(file, "  Elevator %02v:\n    %v steps\n    %v picked up\n",
 			elevator.Id, elevator.StepsTaken, elevator.TotalPickedUp)
 		if err != nil {
@@ -43,12 +43,12 @@ func (c *Controller) Evaluate(file io.Writer) {
 		}
 	}
 	_, err := fmt.Fprintf(file, "Persons: mean waiting time %v, mean traveling time %v\n",
-		meanWaitingTime(c.persons), meanTravelTime(c.persons))
+		meanWaitingTime(c.Persons), meanTravelTime(c.Persons))
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
-	c.persons.Range(func(_, value interface{}) bool {
+	c.Persons.Range(func(_, value interface{}) bool {
 		person := value.(*Person)
 		_, err := fmt.Fprintf(file, "  Person %04v:\n    waited %v steps\n    traveled %v steps\n",
 			person.Id, person.WaitingTime, person.TravelTime)
@@ -61,23 +61,23 @@ func (c *Controller) Evaluate(file io.Writer) {
 }
 
 func (c *Controller) Run(controlSimulation func(*Controller)) {
-	for i := 0; i < c.simulation.ElevatorCount; i++ {
-		elevator := NewElevator(i, c.simulation.ElevatorCapacity)
-		c.elevators[elevator.Id] = elevator
+	for i := 0; i < c.Simulation.ElevatorCount; i++ {
+		elevator := NewElevator(i, c.Simulation.ElevatorCapacity)
+		c.Elevators[elevator.Id] = elevator
 		go elevator.Run(c)
 	}
 	var group sync.WaitGroup
-	group.Add(c.simulation.PersonCount)
+	group.Add(c.Simulation.PersonCount)
 	defer group.Wait()
 	go c.generatePersons(&group)
 	go controlSimulation(c)
 }
 
 func (c *Controller) generatePersons(group *sync.WaitGroup) {
-	for i := 0; i < c.simulation.PersonCount; i++ {
+	for i := 0; i < c.Simulation.PersonCount; i++ {
 		time.Sleep(time.Duration(rand.Intn(1000)) * time.Microsecond)
-		person := NewRandomPerson(i, c.simulation.FloorCount)
-		c.persons.Store(person.Id, person)
+		person := NewRandomPerson(i, c.Simulation.FloorCount)
+		c.Persons.Store(person.Id, person)
 		go person.Run(c, group)
 	}
 }
