@@ -4,6 +4,7 @@ import "log"
 
 type Elevator struct {
 	Id              int
+	TotalPickedUp   int
 	Capacity        int
 	Persons         map[int]*Person
 	CurrentFloor    int
@@ -65,6 +66,7 @@ loop:
 			break loop
 		}
 	}
+	e.TotalPickedUp += count
 	return
 }
 

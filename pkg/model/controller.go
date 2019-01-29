@@ -35,7 +35,8 @@ func (c *Controller) Evaluate(file io.Writer) {
 		return
 	}
 	for _, elevator := range c.elevators {
-		_, err := fmt.Fprintf(file, "  Elevator %02v: %v steps\n", elevator.Id, elevator.StepsTaken)
+		_, err := fmt.Fprintf(file, "  Elevator %02v:\n    %v steps\n    %v picked up\n",
+			elevator.Id, elevator.StepsTaken, elevator.TotalPickedUp)
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -49,7 +50,7 @@ func (c *Controller) Evaluate(file io.Writer) {
 	}
 	c.persons.Range(func(_, value interface{}) bool {
 		person := value.(*Person)
-		_, err := fmt.Fprintf(file, "  Person %04v: waited %v steps, traveled %v steps\n",
+		_, err := fmt.Fprintf(file, "  Person %04v:\n    waited %v steps\n    traveled %v steps\n",
 			person.Id, person.WaitingTime, person.TravelTime)
 		if err != nil {
 			log.Fatal(err)
