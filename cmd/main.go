@@ -20,5 +20,6 @@ func main() {
 	}
 	simulation := model.NewSimulation(100, 25, 10, 10000)
 	simulation.ControllingAlgorithms["simple"] = logic.ControlSimulationSimple
+	simulation.ControllingAlgorithms["most_requested_destination"] = logic.ControlSimulationMostRequestedDestination
 	simulation.Run()
 }
